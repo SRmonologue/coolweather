@@ -7,7 +7,6 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -29,28 +28,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
 public class ChooseAreaFragment extends Fragment {
 
+    @BindView(R.id.title_text)
+    TextView titleText;
+    @BindView(R.id.back_button)
+    Button backButton;
+    @BindView(R.id.list_view)
+    ListView listView;
+
     public static final int LEVEL_PROVINCE = 0;
-
     public static final int LEVEL_CITY = 1;
-
     public static final int LEVEL_COUNTY = 2;
-
     private ProgressDialog progressDialog;
-
-    private TextView titleText;
-
-    private Button backButton;
-
-    private ListView listView;
-
     private ArrayAdapter<String> adapter;
-
     private List<String> dataList = new ArrayList<>();
 
     /**
@@ -88,9 +85,7 @@ public class ChooseAreaFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area, container, false);
-        titleText = (TextView) view.findViewById(R.id.title_text);
-        backButton = (Button) view.findViewById(R.id.back_button);
-        listView = (ListView) view.findViewById(R.id.list_view);
+        ButterKnife.bind(this, view);
         adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(adapter);
         return view;
@@ -99,39 +94,33 @@ public class ChooseAreaFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (currentLevel == LEVEL_PROVINCE) {
-                    selectedProvince = provinceList.get(position);
-                    queryCities();
-                } else if (currentLevel == LEVEL_CITY) {
-                    selectedCity = cityList.get(position);
-                    queryCounties();
-                } else if (currentLevel == LEVEL_COUNTY) {
-                    String weatherId = countyList.get(position).getWeatherId();
-                    if (getActivity() instanceof MainActivity) {
-                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                        intent.putExtra("weather_id", weatherId);
-                        startActivity(intent);
-                        getActivity().finish();
-                    } else if (getActivity() instanceof WeatherActivity) {
-                        WeatherActivity activity = (WeatherActivity) getActivity();
-                        activity.drawerLayout.closeDrawers();
-                        activity.swipeRefresh.setRefreshing(true);
-                        activity.requestWeather(weatherId);
-                    }
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            if (currentLevel == LEVEL_PROVINCE) {
+                selectedProvince = provinceList.get(position);
+                queryCities();
+            } else if (currentLevel == LEVEL_CITY) {
+                selectedCity = cityList.get(position);
+                queryCounties();
+            } else if (currentLevel == LEVEL_COUNTY) {
+                String weatherId = countyList.get(position).getWeatherId();
+                if (getActivity() instanceof MainActivity) {
+                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                    intent.putExtra("weather_id", weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
+                } else if (getActivity() instanceof WeatherActivity) {
+                    WeatherActivity activity = (WeatherActivity) getActivity();
+                    activity.drawerLayout.closeDrawers();
+                    activity.swipeRefresh.setRefreshing(true);
+                    activity.requestWeather(weatherId);
                 }
             }
         });
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (currentLevel == LEVEL_COUNTY) {
-                    queryCities();
-                } else if (currentLevel == LEVEL_CITY) {
-                    queryProvinces();
-                }
+        backButton.setOnClickListener(v -> {
+            if (currentLevel == LEVEL_COUNTY) {
+                queryCities();
+            } else if (currentLevel == LEVEL_CITY) {
+                queryProvinces();
             }
         });
         queryProvinces();
@@ -212,7 +201,7 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
-                    boolean result = false;
+                boolean result = false;
                 if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
                 } else if ("city".equals(type)) {
@@ -221,17 +210,14 @@ public class ChooseAreaFragment extends Fragment {
                     result = Utility.handleCountyResponse(responseText, selectedCity.getId());
                 }
                 if (result) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            closeProgressDialog();
-                            if ("province".equals(type)) {
-                                queryProvinces();
-                            } else if ("city".equals(type)) {
-                                queryCities();
-                            } else if ("county".equals(type)) {
-                                queryCounties();
-                            }
+                    getActivity().runOnUiThread(() -> {
+                        closeProgressDialog();
+                        if ("province".equals(type)) {
+                            queryProvinces();
+                        } else if ("city".equals(type)) {
+                            queryCities();
+                        } else if ("county".equals(type)) {
+                            queryCounties();
                         }
                     });
                 }
@@ -240,12 +226,9 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onFailure(Call call, IOException e) {
                 // 通过runOnUiThread()方法回到主线程处理逻辑
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        closeProgressDialog();
-                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
-                    }
+                getActivity().runOnUiThread(() -> {
+                    closeProgressDialog();
+                    Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
                 });
             }
         });
